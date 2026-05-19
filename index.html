@@ -5,8 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IPL Betting Simulator</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏏</text></svg>" />
-    <script type="module" crossorigin src="/IPL/assets/index-BttoRUqM.js"></script>
-    <link rel="stylesheet" crossorigin href="/IPL/assets/index-DTjsYxf7.css">
+    <script>
+      window.addEventListener('error', function(e) {
+        document.getElementById('root').innerHTML =
+          '<pre style="color:#f87171;padding:32px;font-family:monospace;white-space:pre-wrap">JS Load Error:\n' +
+          e.message + '\n' + e.filename + ':' + e.lineno + '</pre>'
+      })
+      window.addEventListener('unhandledrejection', function(e) {
+        document.getElementById('root').innerHTML =
+          '<pre style="color:#f87171;padding:32px;font-family:monospace;white-space:pre-wrap">Unhandled Promise Rejection:\n' +
+          (e.reason && e.reason.stack || e.reason) + '</pre>'
+      })
+    </script>
+    <script type="module" crossorigin src="/IPL/assets/index-DPtfb2Cv.js"></script>
+    <link rel="stylesheet" crossorigin href="/IPL/assets/index-C6Nl42Pz.css">
   </head>
   <body>
     <div id="root"></div>
