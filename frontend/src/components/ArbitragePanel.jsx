@@ -1,7 +1,7 @@
 // Shows arbitrage analysis for a match.
 // Arbitrage exists when sum(1/odds) < 1 — guaranteed profit regardless of outcome.
 export default function ArbitragePanel({ arbitrage, onBet }) {
-  const { best_odds, arb_percentage, is_arbitrage, profit_margin, margin_over_round, optimal_stakes } = arbitrage
+  const { bestOdds: best_odds, arbPercentage: arb_percentage, isArbitrage: is_arbitrage, profitMargin: profit_margin, overRound: margin_over_round, optimalStakes: optimal_stakes } = arbitrage
 
   return (
     <div className={`rounded-xl border p-4 ${
