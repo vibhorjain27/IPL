@@ -2,23 +2,31 @@ import { useState } from 'react'
 
 const QUICK = [100, 250, 500, 1000, 2000]
 
-export default function BetModal({ match, team, bookmaker, odds, wallet, onConfirm, onClose }) {
+export default function BetModal({ match, team, betType, odds, wallet, onConfirm, onClose }) {
   const [stake, setStake] = useState('')
   const [error, setError] = useState('')
 
+  const isLay    = betType === 'lay'
   const stakeNum = parseFloat(stake) || 0
-  const payout   = stakeNum > 0 ? (stakeNum * odds).toFixed(2) : '—'
-  const profit   = stakeNum > 0 ? ((stakeNum * odds) - stakeNum).toFixed(2) : '—'
+
+  // Back: cost = stake, profit if win = (odds-1)*stake
+  // Lay:  cost = liability = (odds-1)*stake, profit if win (selection loses) = stake
+  const liability = isLay ? +((odds - 1) * stakeNum).toFixed(2) : 0
+  const walletCost = isLay ? liability : stakeNum
+  const profitIfWin = isLay
+    ? stakeNum
+    : +((odds - 1) * stakeNum).toFixed(2)
+  const lossIfLose = isLay ? liability : stakeNum
+
+  const maxStake = isLay
+    ? +(wallet / (odds - 1)).toFixed(2)   // max backer stake where liability <= wallet
+    : wallet
 
   const submit = () => {
     if (!stakeNum || stakeNum <= 0) return setError('Enter a valid stake')
-    if (stakeNum > wallet)          return setError(`Max: ₹${wallet.toLocaleString()}`)
+    if (walletCost > wallet) return setError(`Insufficient balance — max stake ₹${maxStake.toLocaleString()}`)
     try {
-      onConfirm({
-        matchId:   match.id,
-        matchName: `${match.home_team} vs ${match.away_team}`,
-        team, bookmaker, odds, stake: stakeNum,
-      })
+      onConfirm({ matchId: match.id, matchName: `${match.home_team} vs ${match.away_team}`, team, betType, odds, stake: stakeNum })
     } catch (e) {
       setError(e.message)
     }
@@ -27,31 +35,53 @@ export default function BetModal({ match, team, bookmaker, odds, wallet, onConfi
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
       <div className="bg-ipl-card border border-ipl-border rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-ipl-border">
+
+        {/* Header */}
+        <div className={`flex items-center justify-between px-5 py-4 border-b border-ipl-border rounded-t-2xl ${
+          isLay ? 'bg-pink-950/40' : 'bg-sky-950/40'
+        }`}>
           <div>
-            <h2 className="font-bold text-white">Place Bet</h2>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                isLay ? 'bg-pink-600 text-white' : 'bg-sky-600 text-white'
+              }`}>
+                {isLay ? 'LAY' : 'BACK'}
+              </span>
+              <h2 className="font-bold text-white">{team}</h2>
+            </div>
             <p className="text-xs text-gray-500 mt-0.5">{match.home_team} vs {match.away_team}</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">✕</button>
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="bg-ipl-dark rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-gray-400">Selection</span><span className="text-white font-semibold">{team}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Bookmaker</span><span className="text-gray-300">{bookmaker}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Odds</span><span className="text-green-400 font-bold text-lg">{odds.toFixed(2)}</span></div>
+
+          {/* Bet type explainer */}
+          <div className={`rounded-xl p-3 text-xs ${isLay ? 'bg-pink-950/30 border border-pink-800 text-pink-300' : 'bg-sky-950/30 border border-sky-800 text-sky-300'}`}>
+            {isLay
+              ? `You're acting as the bookmaker. You're betting that ${team} will LOSE. Enter the stake you're willing to accept from the backer.`
+              : `You're backing ${team} to WIN at ${odds}. If they win, you collect your stake × odds.`}
           </div>
 
+          {/* Odds display */}
+          <div className="bg-ipl-dark rounded-xl p-4 flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Odds</span>
+            <span className={`font-bold text-2xl ${isLay ? 'text-pink-300' : 'text-sky-300'}`}>{odds.toFixed(2)}</span>
+          </div>
+
+          {/* Quick stake */}
           <div>
-            <p className="text-xs text-gray-500 mb-2">Quick stake</p>
+            <p className="text-xs text-gray-500 mb-2">
+              {isLay ? 'Backer\'s stake you accept (₹)' : 'Your stake (₹)'}
+            </p>
             <div className="flex flex-wrap gap-2">
-              {QUICK.filter(s => s <= wallet).map(s => (
+              {QUICK.filter(s => (isLay ? (odds - 1) * s <= wallet : s <= wallet)).map(s => (
                 <button
                   key={s}
                   onClick={() => { setStake(String(s)); setError('') }}
                   className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
                     stake === String(s)
-                      ? 'bg-blue-600 border-blue-500 text-white'
+                      ? (isLay ? 'bg-pink-600 border-pink-500 text-white' : 'bg-sky-600 border-sky-500 text-white')
                       : 'bg-ipl-dark border-ipl-border text-gray-300 hover:border-blue-700'
                   }`}
                 >
@@ -59,43 +89,66 @@ export default function BetModal({ match, team, bookmaker, odds, wallet, onConfi
                 </button>
               ))}
               <button
-                onClick={() => { setStake(String(wallet)); setError('') }}
+                onClick={() => { setStake(String(maxStake)); setError('') }}
                 className="px-3 py-1.5 rounded-lg text-sm border border-ipl-border bg-ipl-dark text-gray-300 hover:border-blue-700"
               >
-                All in
+                Max
               </button>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Custom stake (₹)</label>
-            <input
-              type="number"
-              value={stake}
-              onChange={e => { setStake(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && submit()}
-              placeholder={`Max ₹${wallet.toLocaleString()}`}
-              min={1} max={wallet}
-              className="w-full bg-ipl-dark border border-ipl-border rounded-xl px-4 py-3 text-white
-                         placeholder-gray-600 focus:outline-none focus:border-blue-600 text-lg font-mono"
-            />
-          </div>
+          {/* Custom stake input */}
+          <input
+            type="number"
+            value={stake}
+            onChange={e => { setStake(e.target.value); setError('') }}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder={`Max ₹${maxStake.toLocaleString()}`}
+            min={1}
+            className="w-full bg-ipl-dark border border-ipl-border rounded-xl px-4 py-3 text-white
+                       placeholder-gray-600 focus:outline-none focus:border-blue-600 text-lg font-mono"
+          />
 
-          <div className="bg-ipl-dark rounded-xl p-4 grid grid-cols-3 gap-4 text-center">
-            <div><p className="text-xs text-gray-500">Stake</p><p className="font-bold text-white">₹{stakeNum || '—'}</p></div>
-            <div><p className="text-xs text-gray-500">Payout</p><p className="font-bold text-blue-300">₹{payout}</p></div>
-            <div><p className="text-xs text-gray-500">Profit</p><p className="font-bold text-green-400">₹{profit}</p></div>
+          {/* P&L summary */}
+          <div className="bg-ipl-dark rounded-xl p-4 space-y-2 text-sm">
+            {isLay && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Your liability (wallet deducted)</span>
+                <span className="text-red-400 font-bold">₹{stakeNum ? liability.toLocaleString() : '—'}</span>
+              </div>
+            )}
+            {!isLay && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Stake (wallet deducted)</span>
+                <span className="text-white font-bold">₹{stakeNum ? stakeNum.toLocaleString() : '—'}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-ipl-border pt-2">
+              <span className="text-gray-300">
+                {isLay ? `Profit if ${team} LOSES` : `Profit if ${team} WINS`}
+              </span>
+              <span className="text-green-400 font-bold">+₹{stakeNum ? profitIfWin.toFixed(2) : '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-300">
+                {isLay ? `Loss if ${team} WINS` : `Loss if ${team} LOSES`}
+              </span>
+              <span className="text-red-400 font-bold">−₹{stakeNum ? lossIfLose.toFixed(2) : '—'}</span>
+            </div>
           </div>
 
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
           <button
             onClick={submit}
-            disabled={!stakeNum}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-white font-bold py-3.5 rounded-xl transition-colors"
+            disabled={!stakeNum || walletCost > wallet}
+            className={`w-full font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-white ${
+              isLay ? 'bg-pink-700 hover:bg-pink-600' : 'bg-sky-700 hover:bg-sky-600'
+            }`}
           >
-            Place Bet — ₹{stakeNum ? stakeNum.toLocaleString() : '0'}
+            {isLay
+              ? `Lay ${team} — Liability ₹${stakeNum ? liability.toLocaleString() : '0'}`
+              : `Back ${team} — Stake ₹${stakeNum ? stakeNum.toLocaleString() : '0'}`}
           </button>
 
           <p className="text-center text-xs text-gray-600">Virtual money only · no real funds</p>

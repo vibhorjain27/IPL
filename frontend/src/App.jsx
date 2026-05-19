@@ -97,7 +97,7 @@ export default function App() {
                 key={m.id}
                 match={m}
                 wallet={store.wallet}
-                onBet={(team, bookmaker, odds) => setBetModal({ match: m, team, bookmaker, odds })}
+                onBet={(team, betType, odds) => setBetModal({ match: m, team, betType, odds })}
                 onViewBook={() => { setBookMatch(m); setTab('book') }}
               />
             ))}
@@ -126,7 +126,7 @@ export default function App() {
         <BetModal
           match={betModal.match}
           team={betModal.team}
-          bookmaker={betModal.bookmaker}
+          betType={betModal.betType}
           odds={betModal.odds}
           wallet={store.wallet}
           onConfirm={(payload) => { store.placeBet(payload); onBetPlaced() }}

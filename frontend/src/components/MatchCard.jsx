@@ -1,15 +1,15 @@
 import dayjs from 'dayjs'
-import OddsTable from './OddsTable'
+import ExchangeTable from './ExchangeTable'
 import ArbitragePanel from './ArbitragePanel'
 
 export default function MatchCard({ match, wallet, onBet, onViewBook }) {
-  const { home_team, away_team, commence_time, bookmakers, arbitrage } = match
+  const { home_team, away_team, commence_time, teams, arbitrage } = match
   const kickoff = dayjs(commence_time)
   const isLive  = dayjs().isAfter(kickoff)
 
   return (
     <div className="bg-ipl-card border border-ipl-border rounded-2xl overflow-hidden">
-      {/* Match header */}
+      {/* Header */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-ipl-border">
         <div>
           <div className="flex items-center gap-2">
@@ -23,7 +23,7 @@ export default function MatchCard({ match, wallet, onBet, onViewBook }) {
             </h2>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {isLive ? 'Match in progress' : kickoff.format('ddd D MMM, HH:mm')} · IPL 2026
+            {isLive ? 'Match in progress' : kickoff.format('ddd D MMM, HH:mm')} · Betfair Exchange
           </p>
         </div>
         <button
@@ -34,20 +34,9 @@ export default function MatchCard({ match, wallet, onBet, onViewBook }) {
         </button>
       </div>
 
-      <div className="p-5 space-y-4">
-        {/* Odds comparison table */}
-        <OddsTable
-          bookmakers={bookmakers}
-          homeTeam={home_team}
-          awayTeam={away_team}
-          onBet={onBet}
-          wallet={wallet}
-        />
-
-        {/* Arbitrage panel */}
-        {arbitrage && (
-          <ArbitragePanel arbitrage={arbitrage} onBet={onBet} />
-        )}
+      <div className="p-5 space-y-5">
+        <ExchangeTable teams={teams} wallet={wallet} onBet={onBet} />
+        {arbitrage && <ArbitragePanel arbitrage={arbitrage} onBet={onBet} teams={teams} />}
       </div>
     </div>
   )
